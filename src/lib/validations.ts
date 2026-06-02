@@ -131,6 +131,91 @@ export const customerSchema = z.object({
   notes: optString,
 });
 
+// ── Venda (Sale) ───────────────────────────
+const dateFromInput = z.string().min(1, "Data obrigatória").transform((s, ctx) => {
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Data inválida" });
+    return z.NEVER;
+  }
+  return d;
+});
+
+const optDateFromInput = z.string().optional().transform((s, ctx) => {
+  if (!s) return undefined;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Data inválida" });
+    return z.NEVER;
+  }
+  return d;
+});
+
+const intFromStr = z.string().min(1).transform((s, ctx) => {
+  const n = parseInt(s, 10);
+  if (!Number.isFinite(n) || n < 1) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Inteiro positivo" });
+    return z.NEVER;
+  }
+  return n;
+});
+
+export const saleSchema = z.object({
+  customerId: z.string().min(1, "Selecione um cliente"),
+  productId: z.string().min(1, "Selecione um produto"),
+  sellerId: optString,
+  origin: z.enum(["ORGANICO", "TRAFEGO_PAGO", "INDICACAO", "AFILIADO", "PARCEIRO", "EVENTO", "INBOUND", "OUTBOUND", "OUTRO"]),
+  saleDate: dateFromInput,
+  grossAmount: numberFromStr,
+  discountAmount: optNumberFromStr,
+  feeAmount: optNumberFromStr,
+  installmentsCount: intFromStr,
+  firstDueDate: dateFromInput,
+  paymentMethodId: optString,
+  bankAccountId: optString,
+  categoryId: optString,
+  costCenterId: optString,
+  commissionPercent: optNumberFromStr,
+  notes: optString,
+});
+
+// ── Marcar parcela como paga ───────────────
+export const markPaidSchema = z.object({
+  installmentId: z.string().min(1),
+  paidAt: dateFromInput,
+  paidAmount: numberFromStr,
+  bankAccountId: optString,
+  paymentMethodId: optString,
+});
+
+// ── Alterar vencimento ────────────────────
+export const changeDueDateSchema = z.object({
+  installmentId: z.string().min(1),
+  newDueDate: dateFromInput,
+  reason: optString,
+});
+
+// ── Reembolso ─────────────────────────────
+export const refundSchema = z.object({
+  saleId: z.string().min(1),
+  amount: numberFromStr,
+  processedAt: dateFromInput,
+  reason: optString,
+});
+
+// ── Assinatura ────────────────────────────
+export const subscriptionSchema = z.object({
+  id: z.string().optional(),
+  customerId: z.string().min(1, "Selecione um cliente"),
+  productId: z.string().min(1, "Selecione um produto"),
+  amount: numberFromStr,
+  period: z.enum(["MENSAL", "TRIMESTRAL", "SEMESTRAL", "ANUAL"]),
+  startDate: dateFromInput,
+  nextChargeAt: optDateFromInput,
+  paymentMethodId: optString,
+  expiresAt: optDateFromInput,
+});
+
 // ── Labels para UI ────────────────────────
 export const productTypeLabel: Record<string, string> = {
   CURSO: "Curso online", MENTORIA: "Mentoria", ASSINATURA: "Assinatura",
@@ -154,4 +239,20 @@ export const saleOriginLabel: Record<string, string> = {
   ORGANICO: "Orgânico", TRAFEGO_PAGO: "Tráfego pago",
   INDICACAO: "Indicação", AFILIADO: "Afiliado", PARCEIRO: "Parceiro",
   EVENTO: "Evento", INBOUND: "Inbound", OUTBOUND: "Outbound", OUTRO: "Outro",
+};
+export const installmentStatusLabel: Record<string, string> = {
+  PENDENTE: "Pendente", PAGO: "Pago", PARCIALMENTE_PAGO: "Parcial",
+  VENCIDO: "Vencida", CANCELADO: "Cancelada", REEMBOLSADO: "Reembolsada",
+  CHARGEBACK: "Chargeback", EM_NEGOCIACAO: "Em negociação",
+};
+export const subscriptionStatusLabel: Record<string, string> = {
+  ATIVA: "Ativa", PENDENTE: "Pendente", INADIMPLENTE: "Inadimplente",
+  CANCELADA: "Cancelada", PAUSADA: "Pausada", EXPIRADA: "Expirada",
+};
+export const subscriptionPeriodLabel: Record<string, string> = {
+  MENSAL: "Mensal", TRIMESTRAL: "Trimestral", SEMESTRAL: "Semestral", ANUAL: "Anual",
+};
+export const saleStatusLabel: Record<string, string> = {
+  ABERTA: "Aberta", CONCLUIDA: "Concluída", CANCELADA: "Cancelada",
+  REEMBOLSADA: "Reembolsada", CHARGEBACK: "Chargeback",
 };
