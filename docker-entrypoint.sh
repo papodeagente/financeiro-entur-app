@@ -1,11 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
-echo "▸ Prisma: applying schema..."
-npx prisma db push --skip-generate --accept-data-loss=false || npx prisma db push --skip-generate
+echo "▸ [entrypoint] DATABASE_URL set? $([ -n "$DATABASE_URL" ] && echo yes || echo NO)"
+echo "▸ [entrypoint] NEXTAUTH_URL=${NEXTAUTH_URL:-<empty>}"
 
-echo "▸ Seeding initial data..."
-node ./node_modules/tsx/dist/cli.mjs prisma/seed.ts || echo "  (seed skipped or already applied)"
+echo "▸ [entrypoint] Applying Prisma schema (db push)..."
+npx prisma db push --skip-generate || { echo "✗ prisma db push falhou"; exit 1; }
 
-echo "▸ Starting Next.js..."
+echo "▸ [entrypoint] Seeding initial data..."
+npx tsx prisma/seed.ts || echo "  (seed skipped or already applied)"
+
+echo "▸ [entrypoint] Starting app: $@"
 exec "$@"
