@@ -19,6 +19,22 @@ export async function syncOverdueInstallments(tx: Prisma.TransactionClient | typ
 }
 
 /**
+ * Marca despesas pendentes/agendadas com dueDate < hoje como VENCIDO.
+ */
+export async function syncOverdueExpenses(tx: Prisma.TransactionClient | typeof prisma = prisma) {
+  const today = startOfDay(new Date());
+  await tx.expense.updateMany({
+    where: {
+      deletedAt: null,
+      dueDate: { lt: today },
+      paidAt: null,
+      status: { in: ["PENDENTE", "AGENDADO"] },
+    },
+    data: { status: "VENCIDO" },
+  });
+}
+
+/**
  * Recalcula o status financeiro do cliente:
  *   - se tem qualquer parcela vencida → INADIMPLENTE
  *   - senão, se estava INADIMPLENTE → volta para ATIVO

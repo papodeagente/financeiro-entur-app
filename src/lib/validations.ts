@@ -203,6 +203,57 @@ export const refundSchema = z.object({
   reason: optString,
 });
 
+// ── Despesa ───────────────────────────────
+export const expenseSchema = z.object({
+  id: z.string().optional(),
+  description: z.string().min(2, "Descrição muito curta").max(200),
+  supplierId: optString,
+  categoryId: optString,
+  costCenterId: optString,
+  bankAccountId: optString,
+  paymentMethodId: optString,
+  responsibleId: optString,
+  amount: numberFromStr,
+  dueDate: dateFromInput,
+  competenceDate: dateFromInput,
+  recurrence: z.enum(["NENHUMA", "MENSAL", "TRIMESTRAL", "SEMESTRAL", "ANUAL"]),
+  recurrenceMonths: z.string().optional().transform((s, ctx) => {
+    if (!s || s.trim() === "") return 12;
+    const n = parseInt(s, 10);
+    if (!Number.isFinite(n) || n < 1 || n > 60) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Entre 1 e 60" });
+      return z.NEVER;
+    }
+    return n;
+  }),
+  attachmentUrl: optString,
+  notes: optString,
+});
+
+export const payExpenseSchema = z.object({
+  expenseId: z.string().min(1),
+  paidAt: dateFromInput,
+  bankAccountId: optString,
+  paymentMethodId: optString,
+  attachmentUrl: optString,
+});
+
+// ── Comissão ──────────────────────────────
+export const payCommissionSchema = z.object({
+  commissionId: z.string().min(1),
+  paidAt: dateFromInput,
+  bankAccountId: optString,
+  notes: optString,
+});
+
+// ── Chargeback ────────────────────────────
+export const chargebackSchema = z.object({
+  saleId: z.string().min(1),
+  amount: numberFromStr,
+  disputedAt: dateFromInput,
+  reason: optString,
+});
+
 // ── Assinatura ────────────────────────────
 export const subscriptionSchema = z.object({
   id: z.string().optional(),
@@ -255,4 +306,16 @@ export const subscriptionPeriodLabel: Record<string, string> = {
 export const saleStatusLabel: Record<string, string> = {
   ABERTA: "Aberta", CONCLUIDA: "Concluída", CANCELADA: "Cancelada",
   REEMBOLSADA: "Reembolsada", CHARGEBACK: "Chargeback",
+};
+export const expenseStatusLabel: Record<string, string> = {
+  PENDENTE: "Pendente", PAGO: "Pago", VENCIDO: "Vencida",
+  CANCELADO: "Cancelada", AGENDADO: "Agendada",
+};
+export const expenseRecurrenceLabel: Record<string, string> = {
+  NENHUMA: "Sem recorrência", MENSAL: "Mensal", TRIMESTRAL: "Trimestral",
+  SEMESTRAL: "Semestral", ANUAL: "Anual",
+};
+export const commissionStatusLabel: Record<string, string> = {
+  PENDENTE: "Pendente", LIBERADA: "Liberada", BLOQUEADA: "Bloqueada",
+  PAGA: "Paga", CANCELADA: "Cancelada", ESTORNADA: "Estornada",
 };

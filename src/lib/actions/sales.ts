@@ -1,7 +1,7 @@
 "use server";
 import { prisma } from "@/lib/db";
 import { requireWrite } from "@/lib/session";
-import { saleSchema, refundSchema } from "@/lib/validations";
+import { saleSchema, refundSchema, chargebackSchema } from "@/lib/validations";
 import { ok, fail, safeParseForm, type ActionResult } from "@/lib/action-result";
 import { addMonths } from "@/lib/dates";
 import { recomputeCustomerStatus } from "@/lib/finance-ops";
@@ -120,6 +120,30 @@ export async function cancelSale(saleId: string): Promise<ActionResult> {
   revalidatePath("/contas-a-receber");
   revalidatePath("/parcelamentos");
   revalidatePath("/clientes");
+  return ok();
+}
+
+export async function registerChargeback(_: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  await requireWrite();
+  const parsed = safeParseForm(chargebackSchema, formData);
+  if (!parsed.ok) return parsed.result;
+  const { saleId, amount, disputedAt, reason } = parsed.data;
+
+  await prisma.$transaction(async (tx) => {
+    const sale = await tx.sale.findUnique({ where: { id: saleId }, select: { customerId: true } });
+    if (!sale) return;
+    await tx.chargeback.create({
+      data: { saleId, customerId: sale.customerId, amount, reason, disputedAt },
+    });
+    await tx.sale.update({ where: { id: saleId }, data: { status: "CHARGEBACK" } });
+    await tx.commission.updateMany({
+      where: { saleId, status: { in: ["PENDENTE", "LIBERADA"] } },
+      data: { status: "BLOQUEADA" },
+    });
+  });
+  revalidatePath("/receitas");
+  revalidatePath("/comissoes");
+  revalidatePath("/dashboard");
   return ok();
 }
 
