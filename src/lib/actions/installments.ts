@@ -4,10 +4,11 @@ import { requireWrite } from "@/lib/session";
 import { markPaidSchema, changeDueDateSchema } from "@/lib/validations";
 import { ok, fail, safeParseForm, type ActionResult } from "@/lib/action-result";
 import { recomputeCustomerStatus, postBankCredit } from "@/lib/finance-ops";
+import { audit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 
 export async function markInstallmentPaid(_: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  await requireWrite();
+  const session = await requireWrite();
   const parsed = safeParseForm(markPaidSchema, formData);
   if (!parsed.ok) return parsed.result;
   const { installmentId, paidAt, paidAmount, bankAccountId, paymentMethodId } = parsed.data;
@@ -62,6 +63,7 @@ export async function markInstallmentPaid(_: ActionResult | null, formData: Form
     }
 
     await recomputeCustomerStatus(inst.sale.customerId, tx);
+    await audit(session.user.id, "MARCAR_PAGO", "RevenueInstallment", installmentId, undefined, { paidAmount, paidAt, bankAccountId }, tx);
   });
 
   revalidatePath("/contas-a-receber");
@@ -74,7 +76,7 @@ export async function markInstallmentPaid(_: ActionResult | null, formData: Form
 }
 
 export async function changeInstallmentDueDate(_: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  await requireWrite();
+  const session = await requireWrite();
   const parsed = safeParseForm(changeDueDateSchema, formData);
   if (!parsed.ok) return parsed.result;
   const { installmentId, newDueDate, reason } = parsed.data;
@@ -94,6 +96,7 @@ export async function changeInstallmentDueDate(_: ActionResult | null, formData:
     },
   });
   await recomputeCustomerStatus(inst.sale.customerId);
+  await audit(session.user.id, "ALTERAR_VENCIMENTO", "RevenueInstallment", installmentId, { dueDate: inst.dueDate }, { dueDate: newDueDate, reason });
 
   revalidatePath("/contas-a-receber");
   revalidatePath("/inadimplencia");

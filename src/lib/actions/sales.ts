@@ -5,10 +5,11 @@ import { saleSchema, refundSchema, chargebackSchema } from "@/lib/validations";
 import { ok, fail, safeParseForm, type ActionResult } from "@/lib/action-result";
 import { addMonths } from "@/lib/dates";
 import { recomputeCustomerStatus } from "@/lib/finance-ops";
+import { audit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 
 export async function createSale(_: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  await requireWrite();
+  const session = await requireWrite();
   const parsed = safeParseForm(saleSchema, formData);
   if (!parsed.ok) return parsed.result;
   const d = parsed.data;
@@ -90,6 +91,9 @@ export async function createSale(_: ActionResult | null, formData: FormData): Pr
       },
     });
 
+    await audit(session.user.id, "CRIAR", "Sale", created.id, undefined, {
+      customerId: d.customerId, productId: d.productId, netAmount: net, installments: n,
+    }, tx);
     return created;
   });
 
@@ -102,8 +106,9 @@ export async function createSale(_: ActionResult | null, formData: FormData): Pr
 }
 
 export async function cancelSale(saleId: string): Promise<ActionResult> {
-  await requireWrite();
+  const session = await requireWrite();
   await prisma.$transaction(async (tx) => {
+    await audit(session.user.id, "CANCELAR", "Sale", saleId, undefined, undefined, tx);
     await tx.sale.update({ where: { id: saleId }, data: { status: "CANCELADA" } });
     await tx.revenueInstallment.updateMany({
       where: { saleId, status: { in: ["PENDENTE", "VENCIDO", "PARCIALMENTE_PAGO", "EM_NEGOCIACAO"] } },
@@ -124,7 +129,7 @@ export async function cancelSale(saleId: string): Promise<ActionResult> {
 }
 
 export async function registerChargeback(_: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  await requireWrite();
+  const session = await requireWrite();
   const parsed = safeParseForm(chargebackSchema, formData);
   if (!parsed.ok) return parsed.result;
   const { saleId, amount, disputedAt, reason } = parsed.data;
@@ -140,6 +145,7 @@ export async function registerChargeback(_: ActionResult | null, formData: FormD
       where: { saleId, status: { in: ["PENDENTE", "LIBERADA"] } },
       data: { status: "BLOQUEADA" },
     });
+    await audit(session.user.id, "CHARGEBACK", "Sale", saleId, undefined, { amount }, tx);
   });
   revalidatePath("/receitas");
   revalidatePath("/comissoes");
@@ -148,7 +154,7 @@ export async function registerChargeback(_: ActionResult | null, formData: FormD
 }
 
 export async function registerRefund(_: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  await requireWrite();
+  const session = await requireWrite();
   const parsed = safeParseForm(refundSchema, formData);
   if (!parsed.ok) return parsed.result;
   const { saleId, amount, processedAt, reason } = parsed.data;
@@ -164,6 +170,7 @@ export async function registerRefund(_: ActionResult | null, formData: FormData)
       where: { saleId, status: { in: ["PENDENTE", "LIBERADA"] } },
       data: { status: "ESTORNADA" },
     });
+    await audit(session.user.id, "REEMBOLSAR", "Sale", saleId, undefined, { amount }, tx);
   });
 
   revalidatePath("/receitas");

@@ -3,6 +3,8 @@ import { authOptions } from "@/lib/auth";
 import { PageShell } from "@/components/layout/page-shell";
 import { prisma } from "@/lib/db";
 import { dateTimeBR } from "@/lib/format";
+import Link from "next/link";
+import { FileBarChart } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,7 @@ export default async function ConfiguracoesPage() {
             <Row label="Conta criada em" value={dateTimeBR(me?.createdAt)} />
           </dl>
           <p className="mt-6 text-xs text-ink-subtle">
-            Troca de senha, convite de usuários, gestão de permissões e integrações (Hotmart, Stripe, Asaas, Mercado Pago, etc.) chegam na Fase 6.
+            Convite de usuários, troca de senha por UI e integrações com Hotmart, Stripe, Asaas, Mercado Pago e Open Finance estão na roadmap após esta versão.
           </p>
         </div>
         <div className="card p-6">
@@ -33,8 +35,13 @@ export default async function ConfiguracoesPage() {
           <dl className="mt-4 space-y-3 text-sm">
             <Row label="Empresa" value="Escola de Negócios do Turismo (ENTUR)" />
             <Row label="Sistema" value="Financeiro ENTUR" />
-            <Row label="Versão" value="Fase 1 · Foundation" />
+            <Row label="Versão" value="v1.0 — sistema completo (Fases 1-6)" />
           </dl>
+          <div className="mt-6">
+            <Link href="/configuracoes/auditoria" className="btn-secondary inline-flex">
+              <FileBarChart className="h-4 w-4" /> Ver log de auditoria
+            </Link>
+          </div>
         </div>
       </div>
     </PageShell>
