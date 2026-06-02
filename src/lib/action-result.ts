@@ -8,10 +8,10 @@ export function fail<T = unknown>(error: string, fieldErrors?: Record<string, st
 }
 
 import type { z } from "zod";
-export function safeParseForm<S extends z.ZodTypeAny>(
+export function safeParseForm<S extends z.ZodTypeAny, T = unknown>(
   schema: S,
   formData: FormData,
-): { ok: true; data: z.infer<S> } | { ok: false; result: ActionResult } {
+): { ok: true; data: z.infer<S> } | { ok: false; result: ActionResult<T> } {
   const obj: Record<string, FormDataEntryValue | FormDataEntryValue[] | null> = {};
   for (const k of new Set(Array.from(formData.keys()))) {
     const all = formData.getAll(k);

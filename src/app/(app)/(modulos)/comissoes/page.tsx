@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { requireSession } from "@/lib/session";
+import { commissionScope } from "@/lib/scopes";
 import { PageShell } from "@/components/layout/page-shell";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { SearchInput } from "@/components/ui/search-input";
@@ -14,9 +16,12 @@ const statusBadge: Record<string, string> = {
 };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
+  const session = await requireSession();
   const { q, status } = await searchParams;
+  const scope = commissionScope(session.user.role, session.user.id);
   const where = {
     deletedAt: null,
+    ...scope,
     ...(status ? { status: status as "PENDENTE" } : {}),
     ...(q ? {
       OR: [
@@ -42,7 +47,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
       },
     }),
     prisma.bankAccount.findMany({ where: { deletedAt: null, active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
-    prisma.commission.groupBy({ by: ["status"], where: { deletedAt: null }, _count: true, _sum: { amount: true } }),
+    prisma.commission.groupBy({ by: ["status"], where: { deletedAt: null, ...scope }, _count: true, _sum: { amount: true } }),
   ]);
 
   const totalLiberada = Number(statusCounts.find(s => s.status === "LIBERADA")?._sum.amount ?? 0);

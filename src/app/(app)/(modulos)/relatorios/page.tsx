@@ -41,12 +41,19 @@ export default async function Page() {
           </section>
         ))}
       </div>
-      <div className="card p-6 mt-6">
-        <h3 className="text-sm font-semibold text-ink flex items-center gap-2">
-          <FileSpreadsheet className="h-4 w-4 text-magenta-400" /> Importar CSV
-        </h3>
-        <p className="mt-1 text-sm text-ink-muted">Suba uma planilha de clientes pra cadastro em massa.</p>
-        <Link href="/relatorios/importar/clientes" className="btn-secondary mt-3 inline-flex">Abrir importador</Link>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+        <Link href="/relatorios/importar/vendas" className="card p-5 hover:ring-1 hover:ring-brand-500/40">
+          <h3 className="text-sm font-semibold text-ink flex items-center gap-2">
+            <FileSpreadsheet className="h-4 w-4 text-magenta-400" /> Importar vendas (Hotmart/Eduzz/Kiwify)
+          </h3>
+          <p className="mt-1 text-xs text-ink-muted">Migração de histórico de vendas com parcelas e status.</p>
+        </Link>
+        <Link href="/relatorios/importar/clientes" className="card p-5 hover:ring-1 hover:ring-brand-500/40">
+          <h3 className="text-sm font-semibold text-ink flex items-center gap-2">
+            <FileSpreadsheet className="h-4 w-4 text-magenta-400" /> Importar clientes
+          </h3>
+          <p className="mt-1 text-xs text-ink-muted">Cadastro em massa de alunos.</p>
+        </Link>
       </div>
     </PageShell>
   );

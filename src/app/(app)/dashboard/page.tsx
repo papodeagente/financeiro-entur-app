@@ -5,6 +5,9 @@ import { AreaChart, DualAreaChart, type AreaPoint } from "@/components/charts/ar
 import { HBarChart, type BarRow } from "@/components/charts/bar-chart";
 import { lastNMonths, nextNMonths } from "@/lib/period";
 import { syncOverdueInstallments, syncOverdueExpenses } from "@/lib/finance-ops";
+import { requireSession } from "@/lib/session";
+import { isSellerOnly } from "@/lib/scopes";
+import { SellerDashboard } from "./_components/seller-dashboard";
 import {
   ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown,
   Wallet, AlertTriangle, Users, Repeat, Receipt, Percent,
@@ -167,6 +170,10 @@ async function loadCashProjection() {
 }
 
 export default async function DashboardPage() {
+  const session = await requireSession();
+  if (isSellerOnly(session.user.role)) {
+    return <SellerDashboard userId={session.user.id} userName={session.user.name} />;
+  }
   const [k, charts, projection] = await Promise.all([loadKpis(), loadCharts(), loadCashProjection()]);
 
   return (

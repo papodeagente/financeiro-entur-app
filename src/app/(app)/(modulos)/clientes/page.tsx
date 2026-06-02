@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { requireSession } from "@/lib/session";
+import { customerScope } from "@/lib/scopes";
 import { PageShell } from "@/components/layout/page-shell";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { SearchInput } from "@/components/ui/search-input";
@@ -18,9 +20,12 @@ const statusBadge: Record<string, string> = {
 };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
+  const session = await requireSession();
   const { q, status } = await searchParams;
+  const scope = customerScope(session.user.role, session.user.id);
   const where = {
     deletedAt: null,
+    ...scope,
     ...(status ? { status: status as "ATIVO" } : {}),
     ...(q ? { OR: [
       { name: { contains: q, mode: "insensitive" as const } },
@@ -29,13 +34,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
       { company: { contains: q, mode: "insensitive" as const } },
     ]} : {}),
   };
+  const baseScopeWhere = { deletedAt: null, ...scope };
   const [list, totalCount, statusCounts] = await Promise.all([
     prisma.customer.findMany({
       where, orderBy: { name: "asc" },
       include: { _count: { select: { sales: true } } },
     }),
-    prisma.customer.count({ where: { deletedAt: null } }),
-    prisma.customer.groupBy({ by: ["status"], where: { deletedAt: null }, _count: true }),
+    prisma.customer.count({ where: baseScopeWhere }),
+    prisma.customer.groupBy({ by: ["status"], where: baseScopeWhere, _count: true }),
   ]);
 
   const rows: (CustomerRow & { firstPurchaseAt: Date | null; lastPurchaseAt: Date | null; _count: { sales: number } })[] = list.map((c) => ({

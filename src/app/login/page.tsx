@@ -2,6 +2,7 @@
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { useState, Suspense } from "react";
 
 function LoginForm() {
@@ -35,6 +36,13 @@ function LoginForm() {
           <h1 className="text-center text-lg font-semibold text-ink">Sistema Financeiro</h1>
           <p className="text-center text-sm text-ink-muted mt-1">Entre com sua conta</p>
 
+          {search.get("accepted") === "1" && (
+            <div className="mt-4 rounded-lg border border-ok/30 bg-ok/10 px-3 py-2 text-xs text-ok">Conta criada! Entre com seu email e senha.</div>
+          )}
+          {search.get("reset") === "1" && (
+            <div className="mt-4 rounded-lg border border-ok/30 bg-ok/10 px-3 py-2 text-xs text-ok">Senha redefinida! Entre com a nova senha.</div>
+          )}
+
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <div>
               <label className="label">Email</label>
@@ -57,6 +65,7 @@ function LoginForm() {
             <button type="submit" disabled={loading} className="btn-primary w-full">
               {loading ? "Entrando…" : "Entrar"}
             </button>
+            <Link href="/esqueci-senha" className="block text-center text-xs text-ink-muted hover:text-ink">Esqueci minha senha</Link>
           </form>
         </div>
         <p className="mt-6 text-center text-xs text-ink-subtle">

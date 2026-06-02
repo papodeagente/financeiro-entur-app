@@ -4,6 +4,8 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { SearchInput } from "@/components/ui/search-input";
 import { brl, dateBR } from "@/lib/format";
 import { saleStatusLabel, saleOriginLabel } from "@/lib/validations";
+import { requireSession } from "@/lib/session";
+import { saleScope, isSellerOnly } from "@/lib/scopes";
 import { NewSaleButton, type Opt, type ProductOpt } from "./_components/sale-form";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +19,13 @@ const statusBadge: Record<string, string> = {
 };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
+  const session = await requireSession();
   const { q, status } = await searchParams;
+  const scope = saleScope(session.user.role, session.user.id);
 
   const where = {
     deletedAt: null,
+    ...scope,
     ...(status ? { status: status as "ABERTA" } : {}),
     ...(q ? {
       OR: [
@@ -30,6 +35,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
       ],
     } : {}),
   };
+  const sellerLocked = isSellerOnly(session.user.role);
 
   const [sales, customers, products, sellers, paymentMethods, bankAccounts, categories, costCenters] = await Promise.all([
     prisma.sale.findMany({

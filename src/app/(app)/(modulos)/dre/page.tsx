@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { requireRole } from "@/lib/session";
 import { PageShell } from "@/components/layout/page-shell";
 import { brl, pct } from "@/lib/format";
 import { periodFromSearch, previousPeriod, type Period } from "@/lib/period";
@@ -58,6 +59,7 @@ function variation(curr: number, prev: number): number | null {
 }
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ year?: string; month?: string; quarter?: string; kind?: string }> }) {
+  await requireRole(["ADMIN", "FINANCEIRO", "GESTOR"]);
   const sp = await searchParams;
   const period = periodFromSearch(sp);
   const previous = previousPeriod(period);

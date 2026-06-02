@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { requireRole } from "@/lib/session";
 import { PageShell } from "@/components/layout/page-shell";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { SearchInput } from "@/components/ui/search-input";
@@ -24,6 +25,7 @@ const statusBadge: Record<string, string> = {
 type Filter = "todas" | "vencidas" | "hoje" | "proximos7" | "proximos30" | "pagas" | "abertas";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ q?: string; filter?: Filter }> }) {
+  await requireRole(["ADMIN", "FINANCEIRO", "GESTOR"]);
   const { q, filter = "abertas" } = await searchParams;
 
   // Antes de listar, sincroniza status vencidos

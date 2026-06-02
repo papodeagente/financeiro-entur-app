@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { requireRole } from "@/lib/session";
 import { PageShell } from "@/components/layout/page-shell";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { brl, dateBR, pct } from "@/lib/format";
@@ -9,6 +10,7 @@ import { AlertTriangle } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
+  await requireRole(["ADMIN", "FINANCEIRO", "GESTOR"]);
   await syncOverdueInstallments();
 
   const [overdueInstallments, allOpenAgg] = await Promise.all([

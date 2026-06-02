@@ -179,6 +179,54 @@ enum AuditAction {
 
 // ───────────────────────── Auth / Users ─────────────────────────
 
+model Invitation {
+  id         String    @id @default(cuid())
+  email      String
+  name       String
+  role       UserRole
+  token      String    @unique
+  invitedById String?
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  invitedBy  User? @relation("invitedBy", fields: [invitedById], references: [id])
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model SalesGoal {
+  id           String   @id @default(cuid())
+  userId       String
+  year         Int
+  month        Int
+  targetAmount Decimal  @db.Decimal(18, 2)
+  targetSales  Int?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, month])
+  @@index([year, month])
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
@@ -191,11 +239,14 @@ model User {
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 
-  salesAsSeller       Sale[]         @relation("seller")
-  commissions         Commission[]   @relation("payee")
+  salesAsSeller       Sale[]               @relation("seller")
+  commissions         Commission[]         @relation("payee")
   auditLogs           AuditLog[]
   notifications       Notification[]
-  expensesResponsible Expense[]      @relation("expense_responsible")
+  expensesResponsible Expense[]            @relation("expense_responsible")
+  passwordResetTokens PasswordResetToken[]
+  invitationsSent     Invitation[]         @relation("invitedBy")
+  goals               SalesGoal[]
 
   @@index([email])
 }
