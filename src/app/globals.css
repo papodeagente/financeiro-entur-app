@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root { color-scheme: dark; }
+
+html, body { background: #0B0820; color: #F5F3FF; }
+
+body {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(255,26,181,0.10), transparent 60%),
+    radial-gradient(1000px 500px at -10% 10%, rgba(139,51,242,0.18), transparent 60%),
+    #0B0820;
+  background-attachment: fixed;
+}
+
+@layer components {
+  .card { @apply rounded-2xl border border-line bg-bg-card/70 backdrop-blur shadow-card; }
+  .card-soft { @apply rounded-2xl border border-line bg-bg-soft; }
+  .input {
+    @apply w-full rounded-lg border border-line bg-bg-soft px-3 py-2 text-sm text-ink
+           placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-500;
+  }
+  .label { @apply text-xs font-medium text-ink-muted; }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium
+           transition disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn text-white shadow-glow;
+    background-image: linear-gradient(135deg, #8B33F2 0%, #FF1AB5 100%);
+  }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-secondary { @apply btn border border-line bg-bg-elev text-ink hover:bg-bg-card; }
+  .btn-ghost { @apply btn text-ink-muted hover:bg-bg-elev hover:text-ink; }
+  .badge { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium; }
+  .badge-ok { @apply badge bg-ok/15 text-ok ring-1 ring-ok/30; }
+  .badge-warn { @apply badge bg-warn/15 text-warn ring-1 ring-warn/30; }
+  .badge-danger { @apply badge bg-danger/15 text-danger ring-1 ring-danger/30; }
+  .badge-info { @apply badge bg-info/15 text-info ring-1 ring-info/30; }
+  .badge-muted { @apply badge bg-bg-elev text-ink-muted ring-1 ring-line; }
+  .table { @apply w-full text-sm; }
+  .table thead th { @apply text-left text-[11px] uppercase tracking-wider text-ink-subtle font-medium px-4 py-3 border-b border-line; }
+  .table tbody td { @apply px-4 py-3 border-b border-line/60 text-ink; }
+  .table tbody tr:hover { @apply bg-bg-elev/40; }
+  .kpi { @apply card p-5; }
+  .kpi-label { @apply text-xs font-medium text-ink-muted uppercase tracking-wider; }
+  .kpi-value { @apply mt-2 text-2xl font-semibold text-ink; }
+  .kpi-delta-up { @apply text-ok text-xs font-medium; }
+  .kpi-delta-down { @apply text-danger text-xs font-medium; }
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #0B0820; }
+::-webkit-scrollbar-thumb { background: #2A2256; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #421080; }

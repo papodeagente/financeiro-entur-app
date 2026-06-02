@@ -1,0 +1,632 @@
+// Sistema Financeiro ENTUR — schema completo
+// Soft delete: deletedAt nullable em entidades importantes
+// Money: Decimal(18,2)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── Enums ─────────────────────────
+
+enum UserRole {
+  ADMIN
+  FINANCEIRO
+  COMERCIAL
+  GESTOR
+  CONSULTOR
+  READONLY
+}
+
+enum CustomerStatus {
+  ATIVO
+  INADIMPLENTE
+  EM_NEGOCIACAO
+  CANCELADO
+  REEMBOLSADO
+  EX_ALUNO
+}
+
+enum ProductType {
+  CURSO
+  MENTORIA
+  ASSINATURA
+  COMUNIDADE
+  EVENTO
+  CONSULTORIA
+  TREINAMENTO
+  PRODUTO_DIGITAL
+  UPSELL
+  DOWNSELL
+  ORDER_BUMP
+}
+
+enum ProductBilling {
+  UNICA
+  RECORRENTE
+}
+
+enum CategoryKind {
+  RECEITA
+  DESPESA
+}
+
+enum BankAccountType {
+  CORRENTE
+  POUPANCA
+  DIGITAL
+  GATEWAY
+  CARTAO_CREDITO
+  CAIXA_INTERNO
+}
+
+enum SaleStatus {
+  ABERTA
+  CONCLUIDA
+  CANCELADA
+  REEMBOLSADA
+  CHARGEBACK
+}
+
+enum SaleOrigin {
+  ORGANICO
+  TRAFEGO_PAGO
+  INDICACAO
+  AFILIADO
+  PARCEIRO
+  EVENTO
+  INBOUND
+  OUTBOUND
+  OUTRO
+}
+
+enum InstallmentStatus {
+  PENDENTE
+  PAGO
+  PARCIALMENTE_PAGO
+  VENCIDO
+  CANCELADO
+  REEMBOLSADO
+  CHARGEBACK
+  EM_NEGOCIACAO
+}
+
+enum ExpenseStatus {
+  PENDENTE
+  PAGO
+  VENCIDO
+  CANCELADO
+  AGENDADO
+}
+
+enum ExpenseRecurrence {
+  NENHUMA
+  MENSAL
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
+}
+
+enum SubscriptionStatus {
+  ATIVA
+  PENDENTE
+  INADIMPLENTE
+  CANCELADA
+  PAUSADA
+  EXPIRADA
+}
+
+enum SubscriptionPeriod {
+  MENSAL
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
+}
+
+enum CommissionStatus {
+  PENDENTE
+  LIBERADA
+  BLOQUEADA
+  PAGA
+  CANCELADA
+  ESTORNADA
+}
+
+enum CommissionBase {
+  BRUTO
+  LIQUIDO
+}
+
+enum ReconciliationStatus {
+  NAO_CONCILIADO
+  CONCILIADO
+  DIVERGENTE
+  PENDENTE_CONFERENCIA
+}
+
+enum TransactionDirection {
+  CREDITO
+  DEBITO
+  TRANSFERENCIA
+}
+
+enum NotificationKind {
+  INFO
+  ALERTA
+  SUCESSO
+  ERRO
+}
+
+enum AuditAction {
+  CRIAR
+  EDITAR
+  EXCLUIR
+  MARCAR_PAGO
+  MARCAR_VENCIDO
+  CANCELAR
+  REEMBOLSAR
+  CHARGEBACK
+  ALTERAR_VENCIMENTO
+  LIBERAR_COMISSAO
+  PAGAR_COMISSAO
+  LOGIN
+  LOGOUT
+}
+
+// ───────────────────────── Auth / Users ─────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         UserRole  @default(READONLY)
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  salesAsSeller       Sale[]         @relation("seller")
+  commissions         Commission[]   @relation("payee")
+  auditLogs           AuditLog[]
+  notifications       Notification[]
+  expensesResponsible Expense[]      @relation("expense_responsible")
+
+  @@index([email])
+}
+
+// ───────────────────────── Cadastros base ─────────────────────────
+
+model Customer {
+  id                String          @id @default(cuid())
+  name              String
+  email             String?
+  phone             String?
+  document          String?
+  company           String?
+  addressLine       String?
+  city              String?
+  state             String?
+  zip               String?
+  status            CustomerStatus  @default(ATIVO)
+  origin            SaleOrigin?
+  sellerId          String?
+  notes             String?
+  firstPurchaseAt   DateTime?
+  lastPurchaseAt    DateTime?
+  externalId        String?
+  integrationSource String?
+  rawPayload        Json?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  deletedAt         DateTime?
+
+  sales         Sale[]
+  subscriptions Subscription[]
+  refunds       Refund[]
+  chargebacks   Chargeback[]
+
+  @@index([name])
+  @@index([email])
+  @@index([document])
+  @@index([status])
+}
+
+model Product {
+  id                       String         @id @default(cuid())
+  name                     String
+  description              String?
+  type                     ProductType
+  billing                  ProductBilling @default(UNICA)
+  defaultPrice             Decimal        @db.Decimal(18, 2)
+  estimatedCost            Decimal?       @db.Decimal(18, 2)
+  estimatedMargin          Decimal?       @db.Decimal(5, 2)
+  defaultCommissionPercent Decimal?       @db.Decimal(5, 2)
+  accessDurationDays       Int?
+  categoryId               String?
+  costCenterId             String?
+  active                   Boolean        @default(true)
+  notes                    String?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  deletedAt                DateTime?
+
+  category      FinancialCategory? @relation(fields: [categoryId], references: [id])
+  costCenter    CostCenter?        @relation(fields: [costCenterId], references: [id])
+  sales         Sale[]
+  subscriptions Subscription[]
+
+  @@index([name])
+  @@index([type])
+  @@index([active])
+}
+
+model Supplier {
+  id          String    @id @default(cuid())
+  name        String
+  document    String?
+  email       String?
+  phone       String?
+  category    String?
+  bankInfo    String?
+  addressLine String?
+  notes       String?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  expenses Expense[]
+
+  @@index([name])
+  @@index([document])
+}
+
+model FinancialCategory {
+  id        String       @id @default(cuid())
+  name      String
+  kind      CategoryKind
+  parentId  String?
+  active    Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  deletedAt DateTime?
+
+  parent   FinancialCategory?  @relation("CategoryParent", fields: [parentId], references: [id])
+  children FinancialCategory[] @relation("CategoryParent")
+  products Product[]
+  sales    Sale[]
+  expenses Expense[]
+
+  @@unique([name, kind])
+  @@index([kind])
+}
+
+model CostCenter {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  products Product[]
+  sales    Sale[]
+  expenses Expense[]
+}
+
+model BankAccount {
+  id             String          @id @default(cuid())
+  name           String
+  bank           String?
+  agency         String?
+  accountNumber  String?
+  type           BankAccountType
+  openingBalance Decimal         @default(0) @db.Decimal(18, 2)
+  currentBalance Decimal         @default(0) @db.Decimal(18, 2)
+  active         Boolean         @default(true)
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+
+  installments     RevenueInstallment[]
+  expenses         Expense[]
+  bankTransactions BankTransaction[]
+  reconciliations  Reconciliation[]
+}
+
+model PaymentMethod {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  sales         Sale[]
+  installments  RevenueInstallment[]
+  expenses      Expense[]
+  subscriptions Subscription[]
+}
+
+// ───────────────────────── Vendas / Receitas ─────────────────────────
+
+model Sale {
+  id                String     @id @default(cuid())
+  customerId        String
+  productId         String
+  sellerId          String?
+  categoryId        String?
+  costCenterId      String?
+  status            SaleStatus @default(ABERTA)
+  origin            SaleOrigin @default(OUTRO)
+  saleDate          DateTime
+  grossAmount       Decimal    @db.Decimal(18, 2)
+  discountAmount    Decimal    @default(0) @db.Decimal(18, 2)
+  feeAmount         Decimal    @default(0) @db.Decimal(18, 2)
+  netAmount         Decimal    @db.Decimal(18, 2)
+  installmentsCount Int        @default(1)
+  paymentMethodId   String?
+  notes             String?
+  externalId        String?
+  gateway           String?
+  transactionId     String?
+  paymentUrl        String?
+  integrationSource String?
+  rawPayload        Json?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  deletedAt         DateTime?
+
+  customer      Customer             @relation(fields: [customerId], references: [id])
+  product       Product              @relation(fields: [productId], references: [id])
+  seller        User?                @relation("seller", fields: [sellerId], references: [id])
+  category      FinancialCategory?   @relation(fields: [categoryId], references: [id])
+  costCenter    CostCenter?          @relation(fields: [costCenterId], references: [id])
+  paymentMethod PaymentMethod?       @relation(fields: [paymentMethodId], references: [id])
+  installments  RevenueInstallment[]
+  commissions   Commission[]
+  refunds       Refund[]
+  chargebacks   Chargeback[]
+
+  @@index([customerId])
+  @@index([productId])
+  @@index([sellerId])
+  @@index([status])
+  @@index([saleDate])
+}
+
+model RevenueInstallment {
+  id              String            @id @default(cuid())
+  saleId          String
+  number          Int
+  amount          Decimal           @db.Decimal(18, 2)
+  paidAmount      Decimal           @default(0) @db.Decimal(18, 2)
+  dueDate         DateTime
+  paidAt          DateTime?
+  status          InstallmentStatus @default(PENDENTE)
+  paymentMethodId String?
+  bankAccountId   String?
+  notes           String?
+  externalId      String?
+  transactionId   String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deletedAt       DateTime?
+
+  sale           Sale            @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  paymentMethod  PaymentMethod?  @relation(fields: [paymentMethodId], references: [id])
+  bankAccount    BankAccount?    @relation(fields: [bankAccountId], references: [id])
+  reconciliation Reconciliation?
+
+  @@unique([saleId, number])
+  @@index([status])
+  @@index([dueDate])
+  @@index([paidAt])
+}
+
+// ───────────────────────── Despesas ─────────────────────────
+
+model Expense {
+  id                 String            @id @default(cuid())
+  description        String
+  supplierId         String?
+  categoryId         String?
+  costCenterId       String?
+  bankAccountId      String?
+  paymentMethodId    String?
+  responsibleId      String?
+  amount             Decimal           @db.Decimal(18, 2)
+  dueDate            DateTime
+  paidAt             DateTime?
+  competenceDate     DateTime
+  status             ExpenseStatus     @default(PENDENTE)
+  recurrence         ExpenseRecurrence @default(NENHUMA)
+  recurrenceParentId String?
+  notes              String?
+  attachmentUrl      String?
+  externalId         String?
+  rawPayload         Json?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  deletedAt          DateTime?
+
+  supplier      Supplier?          @relation(fields: [supplierId], references: [id])
+  category      FinancialCategory? @relation(fields: [categoryId], references: [id])
+  costCenter    CostCenter?        @relation(fields: [costCenterId], references: [id])
+  bankAccount   BankAccount?       @relation(fields: [bankAccountId], references: [id])
+  paymentMethod PaymentMethod?     @relation(fields: [paymentMethodId], references: [id])
+  responsible   User?              @relation("expense_responsible", fields: [responsibleId], references: [id])
+  parent        Expense?           @relation("ExpenseRecurrenceChildren", fields: [recurrenceParentId], references: [id])
+  children      Expense[]          @relation("ExpenseRecurrenceChildren")
+
+  @@index([status])
+  @@index([dueDate])
+  @@index([paidAt])
+  @@index([competenceDate])
+}
+
+// ───────────────────────── Assinaturas ─────────────────────────
+
+model Subscription {
+  id              String             @id @default(cuid())
+  customerId      String
+  productId       String
+  amount          Decimal            @db.Decimal(18, 2)
+  period          SubscriptionPeriod @default(MENSAL)
+  startDate       DateTime
+  nextChargeAt    DateTime?
+  status          SubscriptionStatus @default(ATIVA)
+  paymentMethodId String?
+  chargesCount    Int                @default(0)
+  overdueCount    Int                @default(0)
+  cancelledAt     DateTime?
+  pausedAt        DateTime?
+  expiresAt       DateTime?
+  externalId      String?
+  gateway         String?
+  rawPayload      Json?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  deletedAt       DateTime?
+
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  product       Product        @relation(fields: [productId], references: [id])
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+
+  @@index([status])
+  @@index([nextChargeAt])
+}
+
+// ───────────────────────── Comissões ─────────────────────────
+
+model Commission {
+  id            String           @id @default(cuid())
+  payeeId       String
+  saleId        String
+  base          CommissionBase   @default(LIQUIDO)
+  percent       Decimal          @db.Decimal(5, 2)
+  amount        Decimal          @db.Decimal(18, 2)
+  status        CommissionStatus @default(PENDENTE)
+  expectedPayAt DateTime?
+  paidAt        DateTime?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?
+
+  payee User @relation("payee", fields: [payeeId], references: [id])
+  sale  Sale @relation(fields: [saleId], references: [id])
+
+  @@index([status])
+  @@index([payeeId])
+}
+
+// ───────────────────────── Reembolso / Chargeback ─────────────────────────
+
+model Refund {
+  id          String   @id @default(cuid())
+  saleId      String
+  customerId  String
+  amount      Decimal  @db.Decimal(18, 2)
+  reason      String?
+  processedAt DateTime
+  externalId  String?
+  rawPayload  Json?
+  createdAt   DateTime @default(now())
+
+  sale     Sale     @relation(fields: [saleId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+}
+
+model Chargeback {
+  id         String   @id @default(cuid())
+  saleId     String
+  customerId String
+  amount     Decimal  @db.Decimal(18, 2)
+  reason     String?
+  disputedAt DateTime
+  externalId String?
+  rawPayload Json?
+  createdAt  DateTime @default(now())
+
+  sale     Sale     @relation(fields: [saleId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+}
+
+// ───────────────────────── Banco / Conciliação ─────────────────────────
+
+model BankTransaction {
+  id            String               @id @default(cuid())
+  bankAccountId String
+  direction     TransactionDirection
+  amount        Decimal              @db.Decimal(18, 2)
+  occurredAt    DateTime
+  description   String?
+  refType       String?
+  refId         String?
+  createdAt     DateTime             @default(now())
+
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id])
+
+  @@index([occurredAt])
+  @@index([refType, refId])
+}
+
+model Reconciliation {
+  id            String               @id @default(cuid())
+  installmentId String               @unique
+  bankAccountId String?
+  grossAmount   Decimal              @db.Decimal(18, 2)
+  platformFee   Decimal              @default(0) @db.Decimal(18, 2)
+  gatewayFee    Decimal              @default(0) @db.Decimal(18, 2)
+  netAmount     Decimal              @db.Decimal(18, 2)
+  receivedAt    DateTime
+  status        ReconciliationStatus @default(NAO_CONCILIADO)
+  notes         String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  installment RevenueInstallment @relation(fields: [installmentId], references: [id])
+  bankAccount BankAccount?       @relation(fields: [bankAccountId], references: [id])
+}
+
+// ───────────────────────── Sistema ─────────────────────────
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  userId    String?
+  action    AuditAction
+  entity    String
+  entityId  String
+  before    Json?
+  after     Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime    @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String?
+  kind      NotificationKind @default(INFO)
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId, readAt])
+}
