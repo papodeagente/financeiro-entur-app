@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, TrendingUp, TrendingDown, Wallet, Receipt, Users, Package,
   Repeat, Layers, AlertTriangle, Percent, Truck, Tags, Building2, Landmark,
-  CheckCircle2, BarChart3, LineChart, FileBarChart, Settings,
+  CheckCircle2, BarChart3, LineChart, FileBarChart, Settings, ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,9 @@ type Group = { group: string; items: Item[] };
 const nav: Group[] = [
   { group: "Visão geral", items: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  ]},
+  { group: "Comercial", items: [
+    { href: "/minhas-vendas", label: "Minhas vendas", icon: ShoppingCart, roles: ["COMERCIAL", "CONSULTOR"] },
   ]},
   { group: "Movimento", items: [
     { href: "/receitas", label: "Receitas", icon: TrendingUp },

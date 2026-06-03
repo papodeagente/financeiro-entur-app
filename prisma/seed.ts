@@ -18,7 +18,11 @@ async function main() {
   console.log(`✔ admin: ${adminEmail}`);
 
   // ── Métodos de pagamento ───────────────────────────────────────
-  const paymentMethods = ["PIX", "Cartão de crédito", "Boleto", "Transferência", "Cartão de débito", "Dinheiro"];
+  const paymentMethods = [
+    "PIX", "Boleto", "Cartão de crédito", "Cartão recorrente",
+    "Transferência bancária", "Link de pagamento", "Financiamento interno",
+    "Pagamento manual", "Gateway externo", "Cartão de débito", "Dinheiro", "Outro",
+  ];
   for (const name of paymentMethods) {
     await prisma.paymentMethod.upsert({ where: { name }, update: {}, create: { name } });
   }

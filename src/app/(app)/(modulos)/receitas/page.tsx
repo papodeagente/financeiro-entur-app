@@ -3,10 +3,11 @@ import { PageShell } from "@/components/layout/page-shell";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { SearchInput } from "@/components/ui/search-input";
 import { brl, dateBR } from "@/lib/format";
-import { saleStatusLabel, saleOriginLabel } from "@/lib/validations";
+import { saleStatusLabel, saleOriginLabel, saleValidationStatusLabel, saleValidationStatusBadge } from "@/lib/validations";
 import { requireSession } from "@/lib/session";
 import { saleScope, isSellerOnly } from "@/lib/scopes";
 import { NewSaleButton, type Opt, type ProductOpt } from "./_components/sale-form";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -18,15 +19,16 @@ const statusBadge: Record<string, string> = {
   CHARGEBACK: "badge-danger",
 };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; validation?: string }> }) {
   const session = await requireSession();
-  const { q, status } = await searchParams;
+  const { q, status, validation } = await searchParams;
   const scope = saleScope(session.user.role, session.user.id);
 
   const where = {
     deletedAt: null,
     ...scope,
     ...(status ? { status: status as "ABERTA" } : {}),
+    ...(validation ? { validationStatus: validation as "PENDING_VALIDATION" } : {}),
     ...(q ? {
       OR: [
         { customer: { name: { contains: q, mode: "insensitive" as const } } },
@@ -36,8 +38,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
     } : {}),
   };
   const sellerLocked = isSellerOnly(session.user.role);
+  const isFinancial = session.user.role === "ADMIN" || session.user.role === "FINANCEIRO";
 
-  const [sales, customers, products, sellers, paymentMethods, bankAccounts, categories, costCenters] = await Promise.all([
+  const [sales, customers, products, sellers, paymentMethods, bankAccounts, categories, costCenters, validationCounts] = await Promise.all([
     prisma.sale.findMany({
       where,
       orderBy: { saleDate: "desc" },
@@ -56,7 +59,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
     prisma.bankAccount.findMany({ where: { deletedAt: null, active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.financialCategory.findMany({ where: { kind: "RECEITA", active: true, deletedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.costCenter.findMany({ where: { active: true, deletedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.sale.groupBy({ by: ["validationStatus"], where: { deletedAt: null, ...scope }, _count: true }),
   ]);
+  const pendingCount = validationCounts.find((x) => x.validationStatus === "PENDING_VALIDATION")?._count ?? 0;
+  const adjustmentCount = validationCounts.find((x) => x.validationStatus === "NEEDS_ADJUSTMENT")?._count ?? 0;
 
   type Row = (typeof sales)[number];
   const columns: Column<Row>[] = [
@@ -64,10 +70,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
     {
       header: "Cliente / Produto",
       cell: (r) => (
-        <div>
+        <Link href={`/receitas/${r.id}`} className="block hover:text-magenta-400">
           <div className="text-ink font-medium">{r.customer.name}</div>
           <div className="text-xs text-ink-subtle mt-0.5">{r.product.name}</div>
-        </div>
+        </Link>
       ),
     },
     { header: "Vendedor", cell: (r) => <span className="text-ink-muted text-xs">{r.seller?.name ?? "—"}</span>, width: "160px" },
@@ -82,6 +88,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
       ),
       width: "160px",
       className: "text-right",
+    },
+    {
+      header: "Validação",
+      cell: (r) => <span className={saleValidationStatusBadge[r.validationStatus] ?? "badge-muted"}>{saleValidationStatusLabel[r.validationStatus]}</span>,
+      width: "160px",
     },
     { header: "Status", cell: (r) => <span className={statusBadge[r.status] ?? "badge-muted"}>{saleStatusLabel[r.status]}</span>, width: "120px" },
   ];
@@ -119,6 +130,20 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
           {sales.length} vendas · Total líquido <span className="text-ink font-medium">{brl(totalNet)}</span>
         </div>
       </div>
+      {isFinancial && (pendingCount > 0 || adjustmentCount > 0) && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href={validation === "PENDING_VALIDATION" ? "/receitas" : "/receitas?validation=PENDING_VALIDATION"}
+            className={"rounded-full px-3 py-1 text-xs ring-1 " + (validation === "PENDING_VALIDATION" ? "bg-brand-soft text-ink ring-brand-500/40" : "bg-warn/10 text-warn ring-warn/30 hover:brightness-110")}>
+            Aguardando validação <span className="ml-1 font-semibold">{pendingCount}</span>
+          </Link>
+          {adjustmentCount > 0 && (
+            <Link href="/receitas?validation=NEEDS_ADJUSTMENT" className="rounded-full px-3 py-1 text-xs ring-1 bg-info/10 text-info ring-info/30">
+              Ajuste solicitado <span className="ml-1 font-semibold">{adjustmentCount}</span>
+            </Link>
+          )}
+          {validation && <Link href="/receitas" className="text-xs text-ink-muted hover:text-ink">Limpar filtro</Link>}
+        </div>
+      )}
       <DataTable rows={sales as Row[]} columns={columns} emptyTitle="Nenhuma venda registrada" emptyDescription="Cadastre uma venda em 'Nova venda' — o sistema gera as parcelas automaticamente." />
     </PageShell>
   );

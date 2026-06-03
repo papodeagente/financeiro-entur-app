@@ -84,6 +84,16 @@ enum SaleOrigin {
   OUTRO
 }
 
+enum SaleValidationStatus {
+  PENDING_VALIDATION
+  VALIDATED
+  NEEDS_ADJUSTMENT
+  REJECTED
+  WAITING_RECEIPT
+  WAITING_CONTRACT
+  DUPLICATED
+}
+
 enum InstallmentStatus {
   PENDENTE
   PAGO
@@ -240,6 +250,9 @@ model User {
   deletedAt    DateTime?
 
   salesAsSeller       Sale[]               @relation("seller")
+  salesAsSdr          Sale[]               @relation("sdr")
+  salesSubmitted      Sale[]               @relation("submittedBy")
+  salesValidated      Sale[]               @relation("validatedBy")
   commissions         Commission[]         @relation("payee")
   auditLogs           AuditLog[]
   notifications       Notification[]
@@ -411,17 +424,31 @@ model Sale {
   customerId        String
   productId         String
   sellerId          String?
+  sdrId             String?
+  submittedById     String?
+  validatedById     String?
   categoryId        String?
   costCenterId      String?
   status            SaleStatus @default(ABERTA)
+  validationStatus  SaleValidationStatus @default(VALIDATED)
   origin            SaleOrigin @default(OUTRO)
   saleDate          DateTime
+  firstDueDate      DateTime?
   grossAmount       Decimal    @db.Decimal(18, 2)
   discountAmount    Decimal    @default(0) @db.Decimal(18, 2)
   feeAmount         Decimal    @default(0) @db.Decimal(18, 2)
   netAmount         Decimal    @db.Decimal(18, 2)
+  entryAmount       Decimal?   @db.Decimal(18, 2)
   installmentsCount Int        @default(1)
   paymentMethodId   String?
+  cohort            String?
+  campaign          String?
+  crmLink           String?
+  receiptUrl        String?
+  contractUrl       String?
+  validatedAt       DateTime?
+  rejectedReason    String?
+  adjustmentReason  String?
   notes             String?
   externalId        String?
   gateway           String?
@@ -436,6 +463,9 @@ model Sale {
   customer      Customer             @relation(fields: [customerId], references: [id])
   product       Product              @relation(fields: [productId], references: [id])
   seller        User?                @relation("seller", fields: [sellerId], references: [id])
+  sdr           User?                @relation("sdr", fields: [sdrId], references: [id])
+  submittedBy   User?                @relation("submittedBy", fields: [submittedById], references: [id])
+  validatedBy   User?                @relation("validatedBy", fields: [validatedById], references: [id])
   category      FinancialCategory?   @relation(fields: [categoryId], references: [id])
   costCenter    CostCenter?          @relation(fields: [costCenterId], references: [id])
   paymentMethod PaymentMethod?       @relation(fields: [paymentMethodId], references: [id])
@@ -447,6 +477,8 @@ model Sale {
   @@index([customerId])
   @@index([productId])
   @@index([sellerId])
+  @@index([submittedById])
+  @@index([validationStatus])
   @@index([status])
   @@index([saleDate])
 }

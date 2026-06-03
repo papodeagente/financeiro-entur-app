@@ -164,11 +164,13 @@ export const saleSchema = z.object({
   customerId: z.string().min(1, "Selecione um cliente"),
   productId: z.string().min(1, "Selecione um produto"),
   sellerId: optString,
+  sdrId: optString,
   origin: z.enum(["ORGANICO", "TRAFEGO_PAGO", "INDICACAO", "AFILIADO", "PARCEIRO", "EVENTO", "INBOUND", "OUTBOUND", "OUTRO"]),
   saleDate: dateFromInput,
   grossAmount: numberFromStr,
   discountAmount: optNumberFromStr,
   feeAmount: optNumberFromStr,
+  entryAmount: optNumberFromStr,
   installmentsCount: intFromStr,
   firstDueDate: dateFromInput,
   paymentMethodId: optString,
@@ -176,6 +178,11 @@ export const saleSchema = z.object({
   categoryId: optString,
   costCenterId: optString,
   commissionPercent: optNumberFromStr,
+  cohort: optString,
+  campaign: optString,
+  crmLink: optString,
+  receiptUrl: optString,
+  contractUrl: optString,
   notes: optString,
 });
 
@@ -306,6 +313,24 @@ export const subscriptionPeriodLabel: Record<string, string> = {
 export const saleStatusLabel: Record<string, string> = {
   ABERTA: "Aberta", CONCLUIDA: "Concluída", CANCELADA: "Cancelada",
   REEMBOLSADA: "Reembolsada", CHARGEBACK: "Chargeback",
+};
+export const saleValidationStatusLabel: Record<string, string> = {
+  PENDING_VALIDATION: "Aguardando validação",
+  VALIDATED: "Validada",
+  NEEDS_ADJUSTMENT: "Ajuste solicitado",
+  REJECTED: "Reprovada",
+  WAITING_RECEIPT: "Aguardando comprovante",
+  WAITING_CONTRACT: "Aguardando contrato",
+  DUPLICATED: "Duplicada",
+};
+export const saleValidationStatusBadge: Record<string, string> = {
+  PENDING_VALIDATION: "badge-warn",
+  VALIDATED: "badge-ok",
+  NEEDS_ADJUSTMENT: "badge-info",
+  REJECTED: "badge-danger",
+  WAITING_RECEIPT: "badge-warn",
+  WAITING_CONTRACT: "badge-warn",
+  DUPLICATED: "badge-muted",
 };
 export const expenseStatusLabel: Record<string, string> = {
   PENDENTE: "Pendente", PAGO: "Pago", VENCIDO: "Vencida",
