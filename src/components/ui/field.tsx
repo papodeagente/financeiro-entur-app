@@ -24,9 +24,30 @@ export function Field({
   );
 }
 
-export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
-  const { className, ...rest } = props;
-  return <input {...rest} className={cn("input", className)} />;
+type TextInputProps = InputHTMLAttributes<HTMLInputElement> & {
+  prefix?: string;
+  suffix?: string;
+};
+
+export function TextInput(props: TextInputProps) {
+  const { className, prefix, suffix, ...rest } = props;
+  if (!prefix && !suffix) {
+    return <input {...rest} className={cn("input", className)} />;
+  }
+  return (
+    <div className="relative">
+      {prefix && (
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle text-sm pointer-events-none">{prefix}</span>
+      )}
+      <input
+        {...rest}
+        className={cn("input", prefix ? "pl-9" : "", suffix ? "pr-12" : "", className)}
+      />
+      {suffix && (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-subtle text-sm pointer-events-none">{suffix}</span>
+      )}
+    </div>
+  );
 }
 
 export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
