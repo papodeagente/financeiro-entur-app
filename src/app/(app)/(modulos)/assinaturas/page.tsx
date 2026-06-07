@@ -4,7 +4,7 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { SearchInput } from "@/components/ui/search-input";
 import { brl, dateBR } from "@/lib/format";
 import { subscriptionStatusLabel, subscriptionPeriodLabel } from "@/lib/validations";
-import { NewButton, RowActions, type Opt, type ProductOpt, type SubRow } from "./_components/form";
+import { NewButton, RowActions, type Opt, type CustomerOpt, type ProductOpt, type SubRow } from "./_components/form";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +33,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
         paymentMethod: { select: { name: true } },
       },
     }),
-    prisma.customer.findMany({ where: { deletedAt: null, status: { notIn: ["CANCELADO", "EX_ALUNO"] } }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.customer.findMany({ where: { deletedAt: null, status: { notIn: ["CANCELADO", "EX_ALUNO"] } }, select: { id: true, name: true, email: true, document: true }, orderBy: { name: "asc" } }),
     prisma.product.findMany({ where: { deletedAt: null, active: true }, select: { id: true, name: true, defaultPrice: true }, orderBy: { name: "asc" } }),
     prisma.paymentMethod.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.bankAccount.findMany({ where: { deletedAt: null, active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
@@ -42,6 +42,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
 
   const productOpts: ProductOpt[] = products.map((p) => ({ id: p.id, name: p.name, defaultPrice: p.defaultPrice.toString() }));
   const opt = (xs: { id: string; name: string }[]): Opt[] => xs.map((x) => ({ id: x.id, name: x.name }));
+  const customerOpts: CustomerOpt[] = customers.map((c) => ({ id: c.id, name: c.name, email: c.email, document: c.document }));
 
   const mrr = subs.filter((s) => s.status === "ATIVA" && s.period === "MENSAL").reduce((a, s) => a + Number(s.amount), 0);
 
@@ -76,7 +77,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
     { header: "Status", cell: (r) => <span className={statusBadge[r.status] ?? "badge-muted"}>{subscriptionStatusLabel[r.status]}</span>, width: "140px" },
     {
       header: "",
-      cell: (r) => <RowActions row={r} customers={opt(customers)} products={productOpts} paymentMethods={opt(paymentMethods)} bankAccounts={opt(bankAccounts)} />,
+      cell: (r) => <RowActions row={r} customers={customerOpts} products={productOpts} paymentMethods={opt(paymentMethods)} bankAccounts={opt(bankAccounts)} />,
       className: "text-right",
       width: "200px",
     },
@@ -94,7 +95,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
     <PageShell
       title="Assinaturas & Recorrências"
       description="Cobranças automáticas que se repetem por período. MRR é o motor do recorrente."
-      actions={<NewButton customers={opt(customers)} products={productOpts} paymentMethods={opt(paymentMethods)} />}
+      actions={<NewButton customers={customerOpts} products={productOpts} paymentMethods={opt(paymentMethods)} />}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <SearchInput placeholder="Buscar cliente ou produto…" />
