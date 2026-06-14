@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, TrendingUp, TrendingDown, Wallet, Receipt, Users, Package,
   Repeat, Layers, AlertTriangle, Percent, Truck, Tags, Building2, Landmark,
-  CheckCircle2, BarChart3, LineChart, FileBarChart, Settings, ShoppingCart,
+  CheckCircle2, BarChart3, LineChart, FileBarChart, Settings, ShoppingCart, Headphones,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +14,6 @@ type Role = "ADMIN" | "FINANCEIRO" | "COMERCIAL" | "GESTOR" | "CONSULTOR" | "REA
 type Item = { href: string; label: string; icon: typeof LayoutDashboard; roles?: Role[] };
 type Group = { group: string; items: Item[] };
 
-// Sem `roles` = visível pra todos. Com roles = só esses perfis veem.
 const nav: Group[] = [
   { group: "Visão geral", items: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -35,6 +34,9 @@ const nav: Group[] = [
     { href: "/parcelamentos", label: "Parcelamentos", icon: Layers, roles: ["ADMIN", "FINANCEIRO", "GESTOR"] },
     { href: "/inadimplencia", label: "Inadimplência", icon: AlertTriangle, roles: ["ADMIN", "FINANCEIRO", "GESTOR"] },
     { href: "/comissoes", label: "Comissões", icon: Percent },
+  ]},
+  { group: "Sucesso do cliente", items: [
+    { href: "/sucesso-do-cliente", label: "Atendimento", icon: Headphones },
   ]},
   { group: "Estrutura", items: [
     { href: "/fornecedores", label: "Fornecedores", icon: Truck, roles: ["ADMIN", "FINANCEIRO", "GESTOR"] },
